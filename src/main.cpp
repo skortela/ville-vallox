@@ -69,7 +69,7 @@ void initOTA() {
         DBG("Update finished, rebooting");
     });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        int prog = progress / (total / 100);
+        //int prog = progress / (total / 100);
         //Serial.printf("Progress: %u%%\r", prog);
     });
     ArduinoOTA.onError([](ota_error_t error) {
@@ -89,7 +89,7 @@ void initOTA() {
 void recvMsg(uint8_t *data, size_t len){
     DBG("Received Data...");
     String d = "";
-    for(int i=0; i < len; i++){
+    for(size_t i=0; i < len; i++){
         d += char(data[i]);
     }
     DBG(d.c_str());
@@ -115,15 +115,18 @@ void mqtt_reconnect() {
         DBG("Attempting MQTT connection...");
         // Create a random client ID
         String clientId = "ville-vallox-";
-        clientId += String(random(0xffff), HEX);
+        clientId += String(ESP.getChipId(), HEX);  // Uses the ESP's unique chip ID
         // Attempt to connect
 
         m_mqttClient.setServer(m_settings.m_mqtt_server, m_settings.m_mqtt_port);
 
-        if (m_mqttClient.connect(clientId.c_str(), m_settings.m_mqtt_user, m_settings.m_mqtt_passw /*"rag@6aX-hjQ-zEUG9wz8ZBK-m"*/, KMqttAvailability, MQTTQOS0, true, KOffline)) {
+        if (m_mqttClient.connect(clientId.c_str(), m_settings.m_mqtt_user, m_settings.m_mqtt_passw, KMqttAvailability, MQTT_QOS0, true, KOffline)) {
             Serial.println("connected");
             // Once connected, publish an announcement...
-            m_mqttClient.publish(KMqttAvailability, KOnline, true);
+            delay(100);  // Ensure broker is ready to receive messages
+            if (!m_mqttClient.publish(KMqttAvailability, KOnline, true)) {
+                DBG("Failed to publish online status!");
+            }
             // ... and resubscribe
             m_mqttClient.subscribe(KMqttTopicCommandListen);
 
